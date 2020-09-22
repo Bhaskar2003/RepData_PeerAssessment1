@@ -1,0 +1,123 @@
+---
+title: "Personal Activity Monitoring Data"
+author: "Bhaskar Sharma"
+date: "22/09/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Activity Monitoring
+It is now possible to collect a large amount of data about personal movement
+using activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone
+Up. These type of devices are part of the “quantified self” movement – a group
+of enthusiasts who take measurements about themselves regularly to improve
+their health, to find patterns in their behavior, or because they are tech geeks.
+But these data remain under-utilized both because the raw data are hard to
+obtain and there is a lack of statistical methods and software for processing and interpreting the data..
+
+```{r loading ggplot2, echo=FALSE}
+library(ggplot2)
+```
+It's assumed that ggplot2 library has alread been loaded.
+The data was read as follows.
+```{r reading data}
+activity<-read.csv(unzip("activity.zip"))
+#converting to date format
+activity$date<-as.Date(activity$date)
+head(activity)
+```
+
+## Filling missing values.
+The missing values were replaced by the mean values of their respective interval so as to not alter the data to a large extent.
+```{r newdata, echo=TRUE}
+agg.interval<-aggregate(activity$steps~ activity$interval, FUN=mean)
+
+#Function which will grab the mean from the required intervals
+grabmean<- function(i){
+    na_interval<-activity[i,3]
+    mean<-agg.interval[which(agg.interval[[1]]==na_interval),2]
+    return (mean)
+    
+}
+
+#New Data frame
+newactivity<-activity
+for (i in which(is.na(activity$steps))) {
+  populate<-grabmean(i)
+  activity[i,1]<-populate
+
+}
+
+head(newactivity)
+
+```
+
+### Steps Vs. Days Graph
+```{r}
+g<-g<-ggplot(data=activity, aes(date, steps))
+g+geom_col(fill="orange")
+
+```
+
+### Adding the week column containing the information about weekdays
+```{r}
+weekdays<-weekdays(newactivity$date)
+newactivity<-cbind(newactivity, weekdays)
+
+weekday<-c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+weekend<-c("saturday","saturday")
+
+for (i in seq(1:nrow(newactivity))){
+  if (newactivity$weekdays[i] %in% weekday) {newactivity$week[i]="Weekday"}
+  else {newactivity$week[i]="Weekend"}
+}
+head(newactivity)
+
+```
+
+### Subsetting the data to extract the required information.
+```{r}
+
+day<-subset(newactivity, week=="Weekday")
+end<-subset(newactivity, week=="Weekend")
+agg.end<-aggregate(end$steps~end$interval, FUN=mean)
+agg.day<-aggregate(day$steps~day$interval, FUN=mean)
+
+
+names(agg.day)<-c("Interval", "Steps")
+names(agg.end)<-c("Interval", "Steps")
+
+head(agg.day)
+head(agg.end)
+
+```
+
+### Plotting Interval Vs. Steps Graph for Weekend and Weekdays
+```{r, fig.width=4}
+
+par(mfrow=c(2,1))
+with(agg.day, plot(Interval, Steps, type="l", xlab = "Weekday", col="red"))
+with(agg.end, plot(Interval, Steps, type="l", xlab="Weekend", col="red"))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+* As seen, the initial intervals for weekends' have recorded lesser activities which can be justified as people tend to wake up later than they do on   weeek days.
+* Also, the concluding intervals witness more activity on weekends as people generally go to bed earlier on weekdays.
+
+* The intervals which are in middle witness less activity on weekdays which can be explained by the fact that people are generally in their offices,    classes during the day which restricts their movement. 
